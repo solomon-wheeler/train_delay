@@ -1,4 +1,5 @@
-username = ""  #You need these details to acesss the hsp API, you can get an account from here: www.opendata.nationalrail.co.uk
+# # You need these details to acesss the hsp API, you can get an account from here: www.opendata.nationalrail.co.uk. Username will be your email for this API
+username = ""
 password = ""
 
 import requests
@@ -12,11 +13,13 @@ import pandas
 from requests.auth import \
     HTTPBasicAuth
 
-#used to delete files made by the program once done
+
+# used to delete files made by the program once done
 def cleanup(file_to_delete):
     os.remove(file_to_delete)
 
-#This returns the average amount of services found for each schedule time before and the one currently being done
+
+# This returns the average amount of services found for each schedule time before and the one currently being done
 def average_for_rids(total_rids_list, total_services_current):
     services_done_before_total = 0
     number_of_services_before = 0
@@ -26,10 +29,11 @@ def average_for_rids(total_rids_list, total_services_current):
     total_for_all_services = services_done_before_total + total_services_current
     return total_for_all_services / (number_of_services_before + 1)
 
+
 # This creawtes the html code for the scatter plot of delays, using plotly express
 def create_scatter(delays_data, scheduled_time):
     number_of_each_delay = [[this_one, delays_data.count(this_one)] for this_one in set(delays_data)]
-    size = []  # Todo this is abit of a bodge, could be made better?
+    size = []  # Todo this is a bit of a bodge, could be made better?
     for x in number_of_each_delay:  # THis
         size.append(5)  # ANd his
     this_data = pandas.DataFrame(number_of_each_delay, columns=['Delay(Minutes)', 'Number of occurrences'])
@@ -41,26 +45,32 @@ def create_scatter(delays_data, scheduled_time):
     html_for_this_service = [html_for_this_service]
     return html_for_this_service
 
-#This allows for the user to search for stations using there actual name, and returns there CRS CODE
+
+# This allows for the user to search for stations using there actual name, and returns there CRS CODE
 def to_crs(crs_code_in):
     if crs_code_in.isupper() is True and len(crs_code_in) == 3:
         return crs_code_in
     low_crscodein = crs_code_in.lower()
-    if low_crscodein == "reading":
+    if low_crscodein == "reading": # This is because reading always returns reading west, even when you don't put this in
         return "RDG"
 
     parameters_crs = {"station": low_crscodein}
     url_crs = "https://api.departureboard.io/api/v2.0/getStationBasicInfo/"
     r = requests.get(url=url_crs, params=parameters_crs)
+    print(r)
     crsdata = r.json()
+    print(crsdata)
     try:
         return crsdata[0]['crsCode']
-    except KeyError:
-        print("There were no results found for that station name") #Happens if the station the user searched for dosen't exist
-        return None
+    except IndexError:
+        print(
+            "There were no results found for that station name")  # Happens if the station the user searched for dosen't exist
+        return to_crs(str(input("Input a CRS CODE"))) # Recursion in case the user inputs invalid data
+    #todo runs this again
+
 
 # This takes the average delay for a service and returns the colour
-#todo make colours change based upon data
+# todo make colours change based upon data
 def delay_colour(average_delay):
     try:
         if average_delay <= 0:  # SHould be int valyes from average or 0
@@ -76,6 +86,7 @@ def delay_colour(average_delay):
     except TypeError:
         colour = "#959292"
     return colour
+
 
 # Takes all the data for a schedueld tiome and turns it into html that can be added to the overall file
 def line_to_HTML(schedule_time, average, operator, total_services, cancelled, average_desti,
@@ -109,12 +120,12 @@ def delay(schedule_time, actual_times):
             minutes_actual = int(ThisTime[-2:])
             comb_actual = (hours_actual * 60) + minutes_actual
             delay = comb_actual - comb_schedule
-            if delay < -720 and hours_schedule > hours_actual :  # This is incase the delay takes the time over the day marker, wont work if train is early by 12 hours, or if delayed by 19 hours
+            if delay < -720 and hours_schedule > hours_actual:  # This is incase the delay takes the time over the day marker, wont work if train is early by 12 hours, or if delayed by 19 hours
                 comb_actual += 1440  # add all the hours from the day to the delay time
                 delay = comb_actual - comb_schedule
                 print(
                     "THe code thinks that one of the delays took the train time over the date marker, if this didnt happen then there has been an error")
-            elif delay < -720 and hours_actual > hours_schedule :  # This is incase the delay takes the time over the day marker, wont work if train is early by 12 hours, or if delayed by 19 hours
+            elif delay < -720 and hours_actual > hours_schedule:  # This is incase the delay takes the time over the day marker, wont work if train is early by 12 hours, or if delayed by 19 hours
                 comb_schedule += 1440  # add all the hours from the day to the delay time
                 delay = comb_actual - comb_schedule
                 print(
@@ -123,7 +134,8 @@ def delay(schedule_time, actual_times):
     return delays
 
 
-def average_delay(delays): #this takes a list of each delay and works out the average, not including days where the train was cancelled
+def average_delay(
+        delays):  # this takes a list of each delay and works out the average, not including days where the train was cancelled
     total = 0
     sample_size = 0
     cancelled = 0
@@ -145,8 +157,9 @@ def average_delay(delays): #this takes a list of each delay and works out the av
         cancelled = "no data"
     return average_delay, cancelled
 
-#Any train not arriving within 1 minute of its scheduled time is now counted as delayed, shows data for this
-#todo change this so that it can compare delays against a number of different metrics not just one minutre
+
+# Any train not arriving within 1 minute of its scheduled time is now counted as delayed, shows data for this
+# todo change this so that it can compare delays against a number of different metrics not just one minutre
 def percent_delayed(delays):
     sample_size = 0
     total_industry_delayed = 0
@@ -159,6 +172,7 @@ def percent_delayed(delays):
         return int((total_industry_delayed / sample_size) * 100)
     else:
         return "no Data"
+
 
 # This takes all of the html lines created and adds them to the template file, before saving this as the output file
 def add_to_file(lines_to_add, tag, template_name, output_name):
@@ -177,6 +191,7 @@ def add_to_file(lines_to_add, tag, template_name, output_name):
         file.writelines(data)
     return str(output_name) + ".html"
 
+
 # The class for train data
 class Overall():
     def __init__(self):
@@ -194,7 +209,8 @@ class Overall():
         self.start = to_crs(str(input("Name or CRS code of start station")))
         if self.start is None:
             self.create_pay()
-        self.destination = to_crs(str(input("Name or CRS code of the destionation station")))
+        self.destination = to_crs(str(input("Name or CRS code of the destionation station"))) # THinks this is done twice if thers an error
+
         if self.destination is None:
             self.create_pay()
 
@@ -215,14 +231,15 @@ class Overall():
                    "from_date": start_date, "to_date": end_date, "days": days}
 
         self.payload = json.dumps(payload)
-# Gets the data from the the api and saves it in self.data
+
+    # Gets the data from the the api and saves it in self.data
     def get_data(self):
         url = "https://hsp-prod.rockshore.net/api/v1/serviceMetrics"
         self.data = requests.post(url, auth=HTTPBasicAuth(username, password),
                                   headers=self.headers, data=self.payload)
         self.data = json.loads(self.data.text)
 
-# Takes the data about what services are available and allows the user to choose which ones they want more detailed infromation on
+    # Takes the data about what services are available and allows the user to choose which ones they want more detailed infromation on
     def choose_service(
             self):
         times = []
@@ -260,10 +277,11 @@ class Overall():
         total_number_of_services = len(services_to_examine)
         done_services = 0
         total_rids_list = []
-        for currently_examining in services_to_examine: #Goes through each service the user has selected
+        for currently_examining in services_to_examine:  # Goes through each service the user has selected
             schedule_time = times[int(currently_examining)]
             arrival_time = arrival_times[int(currently_examining)]
-            overall_examine = time_to_overall[int(currently_examining)]# the overall data includes all of the services, including ones that haven't been presented to the user due to lack of data so this changes the value to the overall value, including all servoces
+            overall_examine = time_to_overall[int(
+                currently_examining)]  # the overall data includes all of the services, including ones that haven't been presented to the user due to lack of data so this changes the value to the overall value, including all servoces
             rids = self.data['Services'][int(overall_examine)]['serviceAttributesMetrics']['rids']
             operator = self.data['Services'][int(overall_examine)]['serviceAttributesMetrics']['toc_code']
             data_for_percent = self.get_detailed_info(rids, schedule_time, operator, arrival_time,
@@ -279,14 +297,15 @@ class Overall():
         print(
             "If the file didn't open, open the file named OPENME.html which has been created in the directory the python file is in, using a browser")
         x = 0
-        for currently_adding in services_to_examine: #Goes through each service the user has selected and creates then saves the scatter chart for that
+        for currently_adding in services_to_examine:  # Goes through each service the user has selected and creates then saves the scatter chart for that
             delay_for_currently_adding = self.all_delays[x]
             this_div = create_scatter(delay_for_currently_adding, times[int(currently_adding)])
             self.files_made.append(add_to_file(this_div, "edit me", "more_data_template", currently_adding))
             amount_done += 1
             x += 1
         print("More information pages have all loaded")
-# Gets more detailed informaiton on each rid(primary key for a service on a specific day)
+
+    # Gets more detailed informaiton on each rid(primary key for a service on a specific day)
     def get_detailed_info(self, rids, schedule_time, operator, arrival_time, total_number_of_services, done_services,
                           total_rids_list
                           , currently_examining):
@@ -316,8 +335,8 @@ class Overall():
                     actual_times.append(stop['actual_td'])  # Add date here to make it more preety when being outputted
                 elif self.destination in location:
                     destination_times.append(
-                        stop['actual_ta']) #Use time of arrival not depature for end stop
-        #Below turns all of the raw data into more user friendly data, then saves the html table of this data
+                        stop['actual_ta'])  # Use time of arrival not depature for end stop
+        # Below turns all of the raw data into more user friendly data, then saves the html table of this data
         destination_time = [arrival_time]
         journey_time = delay(schedule_time, destination_time)
         delays = delay(schedule_time, actual_times)
@@ -338,11 +357,12 @@ class Overall():
 
 
 # main
-print("This service is Powered By national rail enquiries, they can be found at www.nationalrail.co.uk")
+print("This service is Powered By national rail enquiries, more info can be found at www.nationalrail.co.uk")
 first = Overall()
 first.create_pay()
 first.get_data()
 first.choose_service()
-input("The program will delete the files it has made (except templates) once you're done, just input anything and the program will delete the files then stop")
+input(
+    "The program will delete the files it has made (except templates) once you're done, just input anything and the program will delete the files then stop")
 for currently_deleting in first.files_made:
     cleanup(currently_deleting)
