@@ -1,6 +1,7 @@
 # # You need these details to acesss the hsp API, you can get an account from here: www.opendata.nationalrail.co.uk. Username will be your email for this API
-username = ""
+username = "solly.wheeler@gmail.com"
 password = ""
+headers = {"Content-Type": "application/json"}
 
 import requests
 import json
@@ -51,7 +52,7 @@ def to_crs(crs_code_in):
     if crs_code_in.isupper() is True and len(crs_code_in) == 3:
         return crs_code_in
     low_crscodein = crs_code_in.lower()
-    if low_crscodein == "reading": # This is because reading always returns reading west, even when you don't put this in
+    if low_crscodein == "reading":  # This is because reading always returns reading west, even when you don't put this in
         return "RDG"
 
     parameters_crs = {"station": low_crscodein}
@@ -65,8 +66,8 @@ def to_crs(crs_code_in):
     except IndexError:
         print(
             "There were no results found for that station name")  # Happens if the station the user searched for dosen't exist
-        return to_crs(str(input("Input a CRS CODE"))) # Recursion in case the user inputs invalid data
-    #todo runs this again
+        return to_crs(str(input("Input a CRS CODE")))  # Recursion in case the user inputs invalid data
+    # todo runs this again
 
 
 # This takes the average delay for a service and returns the colour
@@ -192,24 +193,19 @@ def add_to_file(lines_to_add, tag, template_name, output_name):
     return str(output_name) + ".html"
 
 
-# The class for train data
-class Overall():
+class Station():
     def __init__(self):
-        self.headers = {"Content-Type": "application/json"}
         self.payload = None
         self.data = None
         self.start = "WKM"
         self.destination = "BCE"  # Default, Can be changed by user
-        self.add_line = []
-        self.all_delays = []
-        self.files_made = []
 
-    # Creates the payload to be sent to the HSP api
     def create_pay(self):  # Date = YYYY-MM-DD Time = HHMM
         self.start = to_crs(str(input("Name or CRS code of start station")))
         if self.start is None:
             self.create_pay()
-        self.destination = to_crs(str(input("Name or CRS code of the destionation station"))) # THinks this is done twice if thers an error
+        self.destination = to_crs(
+            str(input("Name or CRS code of the destination station")))  # THinks this is done twice if thers an error
 
         if self.destination is None:
             self.create_pay()
@@ -236,8 +232,24 @@ class Overall():
     def get_data(self):
         url = "https://hsp-prod.rockshore.net/api/v1/serviceMetrics"
         self.data = requests.post(url, auth=HTTPBasicAuth(username, password),
-                                  headers=self.headers, data=self.payload)
+                                  headers=headers, data=self.payload)
+        print(self.data)
         self.data = json.loads(self.data.text)
+    def getterfordata(self):
+        return self.data
+# The class for train data
+class Timetable():
+    def __init__(self,input_data):
+       # self.payload = None
+        self.data = input_data
+       # self.start = "WKM"
+        #self.destination = "BCE"  # Default, Can be changed by user
+        self.add_line = []
+        self.all_delays = []
+        self.files_made = []
+
+    # Creates the payload to be sent to the HSP api
+
 
     # Takes the data about what services are available and allows the user to choose which ones they want more detailed infromation on
     def choose_service(
@@ -324,7 +336,7 @@ class Overall():
             url = "https://hsp-prod.rockshore.net/api/v1/serviceDetails"
             payload = json.dumps({"rid": x})  # Might no work, may need to have seperate value? We'll see
             data = requests.post(url, auth=HTTPBasicAuth(username, password),
-                                 headers=self.headers,
+                                 headers=headers,
                                  data=payload)
             data = json.loads(data.text)
             # print(json.dumps(data,indent=5, sort_keys=True))
@@ -332,7 +344,7 @@ class Overall():
             for stop in data['serviceAttributesDetails']['locations']:
                 location = stop['location']
                 if self.start in location:
-                    actual_times.append(stop['actual_td'])  # Add date here to make it more preety when being outputted
+                    actual_times.append(stop['actual_td'])  # Add date here to make it more pretty when being outputted
                 elif self.destination in location:
                     destination_times.append(
                         stop['actual_ta'])  # Use time of arrival not depature for end stop
@@ -358,10 +370,11 @@ class Overall():
 
 # main
 print("This service is Powered By national rail enquiries, more info can be found at www.nationalrail.co.uk")
-first = Overall()
+first = Station()
 first.create_pay()
 first.get_data()
-first.choose_service()
+second = Timetable(first.getterfordata())
+second.choose_service()
 input(
     "The program will delete the files it has made (except templates) once you're done, just input anything and the program will delete the files then stop")
 for currently_deleting in first.files_made:
