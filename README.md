@@ -18,5 +18,5 @@ You can get all of these using PIP.
 First the user inputs the stations, and times they would like services for, these are then sent to the HSP api, which returns services that match the data the user inputted, the user can then choose some of these services to get more infomation on, or you can get more infromation on all of them.
 Each  individual service on a day has a unique identifier (called an "rid"), the program gets data on each individual service, and finds the actual time of departure from the first station and the actual time of arrival at the destination station. The program then uses this data to create all of the metrics, such as delay and percent delayed. It then turns this data into the html code for a table, and outputs this to a template file, which is then opened in the users browser.
 
-#More Info
+# More Info
 You can find more information as well as an example output on my website - https://solomon-wheeler.github.io/#progamming
