@@ -1,6 +1,7 @@
 # # You need these details to acesss the hsp API, you can get an account from here: www.opendata.nationalrail.co.uk. Username will be your email for this API
-username = ""
+username = "solly.wheeler@gmail.com"
 password = ""
+headers = {"Content-Type": "application/json"}
 
 import requests
 import json
@@ -51,7 +52,7 @@ def to_crs(crs_code_in):
     if crs_code_in.isupper() is True and len(crs_code_in) == 3:
         return crs_code_in
     low_crscodein = crs_code_in.lower()
-    if low_crscodein == "reading": # This is because reading always returns reading west, even when you don't put this in
+    if low_crscodein == "reading":  # This is because reading always returns reading west, even when you don't put this in
         return "RDG"
 
     parameters_crs = {"station": low_crscodein}
@@ -64,9 +65,10 @@ def to_crs(crs_code_in):
         return crsdata[0]['crsCode']
     except IndexError:
         print(
-            "There were no results found for that station name")  # Happens if the station the user searched for dosen't exist
-        return to_crs(str(input("Input a CRS CODE"))) # Recursion in case the user inputs invalid data
-    #todo runs this again
+            "There were no results found for that station name")  # Happens if the station the user searched for
+        # dosen't exist
+        return to_crs(str(input("Input a CRS CODE")))  # Recursion in case the user inputs invalid data
+    # todo runs this again
 
 
 # This takes the average delay for a service and returns the colour
@@ -124,12 +126,14 @@ def delay(schedule_time, actual_times):
                 comb_actual += 1440  # add all the hours from the day to the delay time
                 delay = comb_actual - comb_schedule
                 print(
-                    "THe code thinks that one of the delays took the train time over the date marker, if this didnt happen then there has been an error")
+                    "THe code thinks that one of the delays took the train time over the date marker, if this didnt "
+                    "happen then there has been an error")
             elif delay < -720 and hours_actual > hours_schedule:  # This is incase the delay takes the time over the day marker, wont work if train is early by 12 hours, or if delayed by 19 hours
                 comb_schedule += 1440  # add all the hours from the day to the delay time
                 delay = comb_actual - comb_schedule
                 print(
-                    "THe code thinks that one of the delays took the train time over the date marker, if this didnt happen then there has been an error")
+                    "THe code thinks that one of the delays took the train time over the date marker, if this didnt "
+                    "happen then there has been an error")
         delays.append(delay)
     return delays
 
@@ -147,15 +151,15 @@ def average_delay(
         sample_size += 1
 
     try:
-        average_delay = int(total / sample_size)
+        average_delay_value = int(total / sample_size)
     except ZeroDivisionError:
         print("We have no data for this service in the time period you selected")
-        average_delay = "No data"
+        average_delay_value = "No data"
     try:
         cancelled = int((cancelled / (sample_size + cancelled)) * 100)
     except ZeroDivisionError:
         cancelled = "no data"
-    return average_delay, cancelled
+    return average_delay_value, cancelled
 
 
 # Any train not arriving within 1 minute of its scheduled time is now counted as delayed, shows data for this
@@ -192,27 +196,14 @@ def add_to_file(lines_to_add, tag, template_name, output_name):
     return str(output_name) + ".html"
 
 
-# The class for train data
-class Overall():
+class Stations():
     def __init__(self):
-        self.headers = {"Content-Type": "application/json"}
         self.payload = None
         self.data = None
-        self.start = "WKM"
-        self.destination = "BCE"  # Default, Can be changed by user
-        self.add_line = []
-        self.all_delays = []
-        self.files_made = []
 
     # Creates the payload to be sent to the HSP api
-    def create_pay(self):  # Date = YYYY-MM-DD Time = HHMM
-        self.start = to_crs(str(input("Name or CRS code of start station")))
-        if self.start is None:
-            self.create_pay()
-        self.destination = to_crs(str(input("Name or CRS code of the destionation station"))) # THinks this is done twice if thers an error
 
-        if self.destination is None:
-            self.create_pay()
+    def create_payload(self):  # Date = YYYY-MM-DD Time = HHMM
 
         start_time = str(input("The earliest time you would like services from, in the form HHMM e.g 0700"))
         end_time = str(input("The Latest time you would like services from, in the form HHMM e.g 0700"))
@@ -227,25 +218,40 @@ class Overall():
             days = "SUNDAY"
         print(
             "Getting the data, this might take a while depending on the how long your time period is and how often trains are")
-        payload = {"from_loc": self.start, "to_loc": self.destination, "from_time": start_time, "to_time": end_time,
+        payload = {"from_loc": start, "to_loc": destination, "from_time": start_time, "to_time": end_time,
                    "from_date": start_date, "to_date": end_date, "days": days}
 
         self.payload = json.dumps(payload)
 
     # Gets the data from the the api and saves it in self.data
-    def get_data(self):
+    def source_data(self):
         url = "https://hsp-prod.rockshore.net/api/v1/serviceMetrics"
         self.data = requests.post(url, auth=HTTPBasicAuth(username, password),
-                                  headers=self.headers, data=self.payload)
+                                  headers=headers, data=self.payload)
+        print(self.data)
         self.data = json.loads(self.data.text)
+
+    def get_json_data(self):
+        return self.data
+
+    def get_station_data(self):
+        return self.start, self.destination
+
+
+class Timetable():  # todo need a new class for actual train data within this class and make the relationship between choose_service and get detilated information less reliant on overall class
+    def __init__(self, input_data):
+        self.data = input_data  # Not sure whether parsing the value in is the correect way to do this or wether I should use inheritance todo
+        self.add_line = []
+        self.all_delays = []
+        self.files_made = []
+        self.times = []
+        self.arrival_times = []
+        self.time_to_overall = []
 
     # Takes the data about what services are available and allows the user to choose which ones they want more detailed infromation on
     def choose_service(
             self):
-        times = []
-        arrival_times = []
         invalid_times = []
-        time_to_overall = []
         valid_services = 0
         services_found = 0
         for x in self.data['Services']:
@@ -253,63 +259,74 @@ class Overall():
             if num_rids == 1:
                 invalid_times.append(x['serviceAttributesMetrics']['gbtt_ptd'])
             else:
-                times.append(x['serviceAttributesMetrics']['gbtt_ptd'])
-                time_to_overall.append(services_found)
-                arrival_times.append(x['serviceAttributesMetrics']['gbtt_pta'])
+                self.times.append(x['serviceAttributesMetrics']['gbtt_ptd'])
+                self.time_to_overall.append(services_found)
+                self.arrival_times.append(x['serviceAttributesMetrics']['gbtt_pta'])
                 valid_services += 1
             services_found += 1
 
         if len(invalid_times) != 0:
             print("The following times were skipped because there wasn't enough data on them: ", invalid_times)
         print("Which service would you like the data on?")
-        for services_done in range(len(times)):
-            print(services_done, times[services_done])
+        for services_done in range(len(self.times)):
+            print(services_done, self.times[services_done])
 
         service_choice = str(
             input(
-                "Input a single number for info on just that, numbers with commas in between them for mutiple services or input ALL for information on all of them"))
+                "Input a single number for info on just that, numbers with commas in between them for mutiple "
+                "services or input ALL for information on all of them"))
         services_to_examine = []
         if service_choice == "ALL":
-            for services_to_add in range(len(times)):
+            for services_to_add in range(len(self.times)):
                 services_to_examine.append(services_to_add)
         else:
             services_to_examine = service_choice.split(",")
+        self.each_timetabeled_info(services_to_examine)
+
+    def each_timetabeled_info(self, services_to_examine):
         total_number_of_services = len(services_to_examine)
         done_services = 0
         total_rids_list = []
         for currently_examining in services_to_examine:  # Goes through each service the user has selected
-            schedule_time = times[int(currently_examining)]
-            arrival_time = arrival_times[int(currently_examining)]
-            overall_examine = time_to_overall[int(
-                currently_examining)]  # the overall data includes all of the services, including ones that haven't been presented to the user due to lack of data so this changes the value to the overall value, including all servoces
+            schedule_time = self.times[int(currently_examining)]
+            arrival_time = self.arrival_times[int(currently_examining)]
+            overall_examine = self.time_to_overall[int(
+                currently_examining)]  # the overall data includes all of the services, including ones that haven't
+            # been presented to the user due to lack of data so this changes the value to the overall value,
+            # including all servoces
             rids = self.data['Services'][int(overall_examine)]['serviceAttributesMetrics']['rids']
             operator = self.data['Services'][int(overall_examine)]['serviceAttributesMetrics']['toc_code']
-            data_for_percent = self.get_detailed_info(rids, schedule_time, operator, arrival_time,
-                                                      total_number_of_services, done_services, total_rids_list,
-                                                      currently_examining)
+            data_for_percent = self.each_individaul_service_info(rids, schedule_time, operator, arrival_time,
+                                                                 total_number_of_services, done_services,
+                                                                 total_rids_list,
+                                                                 currently_examining)
             done_services += data_for_percent[0]
             total_rids_list.append(data_for_percent[1])
         amount_done = 0
+
+        # todo beneath should have it's own function within website class
         self.files_made.append(add_to_file(self.add_line, "edit me", "table", "OPENME"))
         print("Outputting this data to a file which is about to open, more information pages are still loading")
         webbrowser.open('file://' + os.path.realpath(
-            "OPENME.html"))  # Use this so that it will still work when this project is moved to a different computer, or to a differtn place on system
+            "OPENME.html"))  # Use this so that it will still work when this project is moved to a different
+        # computer, or to a differtn place on system
         print(
-            "If the file didn't open, open the file named OPENME.html which has been created in the directory the python file is in, using a browser")
+            "If the file didn't open, open the file named OPENME.html which has been created in the directory the "
+            "python file is in, using a browser")
         x = 0
         for currently_adding in services_to_examine:  # Goes through each service the user has selected and creates then saves the scatter chart for that
             delay_for_currently_adding = self.all_delays[x]
-            this_div = create_scatter(delay_for_currently_adding, times[int(currently_adding)])
+            this_div = create_scatter(delay_for_currently_adding, self.times[int(currently_adding)])
             self.files_made.append(add_to_file(this_div, "edit me", "more_data_template", currently_adding))
             amount_done += 1
             x += 1
         print("More information pages have all loaded")
 
     # Gets more detailed informaiton on each rid(primary key for a service on a specific day)
-    def get_detailed_info(self, rids, schedule_time, operator, arrival_time, total_number_of_services, done_services,
-                          total_rids_list
-                          , currently_examining):
-        # print(str(rids)) #WOrking up to here
+    def each_individaul_service_info(self, rids, schedule_time, operator, arrival_time, total_number_of_services,
+                                     done_services,
+                                     total_rids_list
+                                     , currently_examining):
         actual_times = []
         destination_times = []
         total_services_current = len(rids)
@@ -324,16 +341,15 @@ class Overall():
             url = "https://hsp-prod.rockshore.net/api/v1/serviceDetails"
             payload = json.dumps({"rid": x})  # Might no work, may need to have seperate value? We'll see
             data = requests.post(url, auth=HTTPBasicAuth(username, password),
-                                 headers=self.headers,
+                                 headers=headers,
                                  data=payload)
             data = json.loads(data.text)
             # print(json.dumps(data,indent=5, sort_keys=True))
-            found = False
             for stop in data['serviceAttributesDetails']['locations']:
                 location = stop['location']
-                if self.start in location:
-                    actual_times.append(stop['actual_td'])  # Add date here to make it more preety when being outputted
-                elif self.destination in location:
+                if start in location:
+                    actual_times.append(stop['actual_td'])  # Add date here to make it more pretty when being outputted
+                elif destination in location:
                     destination_times.append(
                         stop['actual_ta'])  # Use time of arrival not depature for end stop
         # Below turns all of the raw data into more user friendly data, then saves the html table of this data
@@ -358,11 +374,17 @@ class Overall():
 
 # main
 print("This service is Powered By national rail enquiries, more info can be found at www.nationalrail.co.uk")
-first = Overall()
-first.create_pay()
-first.get_data()
-first.choose_service()
+start = to_crs(str(input("Name or CRS code of start station")))
+destination = to_crs(
+    str(input("Name or CRS code of the destination station")))  # THinks this is done twice if thers an error
+
+first = Stations()
+first.create_payload()
+first.source_data()
+second = Timetable(first.get_json_data())
+second.choose_service()
 input(
-    "The program will delete the files it has made (except templates) once you're done, just input anything and the program will delete the files then stop")
-for currently_deleting in first.files_made:
+    "The program will delete the files it has made (except templates) once you're done, just input anything and the "
+    "program will delete the files then stop")
+for currently_deleting in second.files_made:
     cleanup(currently_deleting)
