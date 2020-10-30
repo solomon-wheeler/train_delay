@@ -31,7 +31,7 @@ def average_for_rids(total_rids_list, total_services_current):
     return total_for_all_services / (number_of_services_before + 1)
 
 
-# This creawtes the html code for the scatter plot of delays, using plotly express
+# This creates the html code for the scatter plot of delays, using plotly express
 def create_scatter(delays_data, scheduled_time):
     number_of_each_delay = [[this_one, delays_data.count(this_one)] for this_one in set(delays_data)]
     size = []  # Todo this is a bit of a bodge, could be made better?
@@ -64,18 +64,15 @@ def to_crs(crs_code_in):
     try:
         return crsdata[0]['crsCode']
     except IndexError:
-        print(
-            "There were no results found for that station name")  # Happens if the station the user searched for
-        # dosen't exist
-        return to_crs(str(input("Input a CRS CODE")))  # Recursion in case the user inputs invalid data
-    # todo runs this again
+        return to_crs(str(input("There were no results found for that station name please try again, and check for "
+                                "any typos.")))  # Recursion in case the user inputs invalid data
 
 
 # This takes the average delay for a service and returns the colour
 # todo make colours change based upon data
 def delay_colour(average_delay):
     try:
-        if average_delay <= 0:  # SHould be int valyes from average or 0
+        if average_delay <= 0:  # SHould be int vales from average or 0
             colour = "green"
         elif 1 <= average_delay < 3:
             colour = "#FFC300"
@@ -90,11 +87,12 @@ def delay_colour(average_delay):
     return colour
 
 
-# Takes all the data for a schedueld tiome and turns it into html that can be added to the overall file
+# Takes all the data for a scheduled time and turns it into html that can be added to the overall file
 def line_to_HTML(schedule_time, average, operator, total_services, cancelled, average_desti,
                  journey_time,
                  percent_delayed_service,
-                 services_to_examine):  # Could make this so that colour gradient is based on services, so really unreilaible lines arent just all red, colour graident?
+                 services_to_examine):  # Could make this so that colour gradient is based on services, so really
+    # unreilaible lines arent just all red, colour graident?
     colour_arival_delay = delay_colour(average)
     colour_destination_delay = delay_colour(average_desti)
 
@@ -163,7 +161,7 @@ def average_delay(
 
 
 # Any train not arriving within 1 minute of its scheduled time is now counted as delayed, shows data for this
-# todo change this so that it can compare delays against a number of different metrics not just one minutre
+# todo  change it so the user can say what they define as late and store this in a user classs
 def percent_delayed(delays):
     sample_size = 0
     total_industry_delayed = 0
@@ -207,7 +205,7 @@ class Stations():
 
         start_time = str(input("The earliest time you would like services from, in the form HHMM e.g 0700"))
         end_time = str(input("The Latest time you would like services from, in the form HHMM e.g 0700"))
-        start_date = "2020-01-01"  # SHould add user input for these at some point, but for now dont want too much data to handle
+        start_date = "2020-01-01"  # todo add user input for these at some point, but for now dont want too much data to handle
         end_date = "2020-03-12"
         which_days = str(input("Would you like (W)eekdays, (SA)turday or (SU)nday?"))
         if which_days == "W":
@@ -323,6 +321,7 @@ class Timetable():  # todo need a new class for actual train data within this cl
         print("More information pages have all loaded")
 
     # Gets more detailed informaiton on each rid(primary key for a service on a specific day)
+    #todo splits this into mutiple fucntions and add classes
     def each_individaul_service_info(self, rids, schedule_time, operator, arrival_time, total_number_of_services,
                                      done_services,
                                      total_rids_list
