@@ -374,16 +374,14 @@ class Timetable():  # todo need a new class for actual train data within this cl
 # main
 print("This service is Powered By national rail enquiries, more info can be found at www.nationalrail.co.uk")
 start = to_crs(str(input("Name or CRS code of start station")))
-destination = to_crs(
-    str(input("Name or CRS code of the destination station")))  # THinks this is done twice if thers an error
-
-first = Stations()
-first.create_payload()
-first.source_data()
-second = Timetable(first.get_json_data())
-second.choose_service()
+destination = to_crs(str(input("Name or CRS code of the destination station")))  # THinks this is done twice if thers an error
+first_station = Stations()
+first_station.create_payload() #This is creating the payload to be sent to the API, taking basic information from the user and using this to create the payload
+first_station.source_data() #This queires the api for the overview data (ifo on number of jounries found at certain times, but not delay info for each individaul service
+timetable_for_journey = Timetable(first_station.get_json_data())
+timetable_for_journey.choose_service() #This allows the user to choose the services they want and then gets more detialed information on these
 input(
     "The program will delete the files it has made (except templates) once you're done, just input anything and the "
     "program will delete the files then stop")
-for currently_deleting in second.files_made:
+for currently_deleting in timetable_for_journey.files_made:
     cleanup(currently_deleting)
