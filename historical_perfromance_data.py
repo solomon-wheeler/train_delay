@@ -132,7 +132,7 @@ class website():
         print(
             "If the file didn't open, open the file named OPENME.html which has been created in the directory the "
             "python file is in, using a browser")
-    def get_files_made(selfs):
+    def get_files_made(self):
         return self.files_made
 # This function takes the scheduled time (should be one value) and a list of the actual times, it compares them and returns a list of how delayed each service was.
 def delay(schedule_time, ThisTime):
@@ -164,7 +164,7 @@ def delay(schedule_time, ThisTime):
 
 
 
-class Stations():
+class Stations(): #todo need a new name for this class
     def __init__(self):
         self.payload = None
         self.data = None
@@ -206,61 +206,30 @@ class Stations():
         return self.start, self.destination
 
 
-class Timetable():  # todo need a new class for actual train data within this class and make the relationship between choose_service and get detilated information less reliant on overall class
-    def __init__(self, input_data):
-        self.data = input_data  # Not sure whether parsing the value in is the correect way to do this or wether I should use inheritance todo
-        self.add_line = []
-        self.all_delays = []
-        self.files_made = []
-        self.times = []
-        self.arrival_times = []
-        self.time_to_overall = []
-
+####not added to rewrite yet #####
     # Takes the data about what services are available and allows the user to choose which ones they want more detailed infromation on
 
-    def each_timetabeled_info(self, services_to_examine):
-
-
-        # todo beneath should have it's own function within website class
+   # def each_timetabeled_info(self, services_to_examine):
+#
+#
+ #       # todo beneath should have it's own function within website class
         self.files_made.append(add_to_file(self.add_line, "edit me", "table", "OPENME"))
-        print("Outputting this data to a file which is about to open, more information pages are still loading")
-        webbrowser.open('file://' + os.path.realpath(
+  #      print("Outputting this data to a file which is about to open, more information pages are still loading")
+   #     webbrowser.open('file://' + os.path.realpath(
             "OPENME.html"))  # Use this so that it will still work when this project is moved to a different
-        # computer, or to a differtn place on system
-        print(
-            "If the file didn't open, open the file named OPENME.html which has been created in the directory the "
-            "python file is in, using a browser")
-        x = 0
-        for currently_adding in services_to_examine:  # Goes through each service the user has selected and creates then saves the scatter chart for that
-            delay_for_currently_adding = self.all_delays[x]
-            this_div = create_scatter(delay_for_currently_adding, self.times[int(currently_adding)])
-            self.files_made.append(add_to_file(this_div, "edit me", "more_data_template", currently_adding))
-            amount_done += 1
-            x += 1
-        print("More information pages have all loaded")
+    #    # computer, or to a differtn place on system
+     #   print(
+       #     "If the file didn't open, open the file named OPENME.html which has been created in the directory the "
+      #      "python file is in, using a browser")
+       # x = 0
+        #for currently_adding in services_to_examine:  # Goes through each service the user has selected and creates then saves the scatter chart for that
+         #   delay_for_currently_adding = self.all_delays[x]
+          #  this_div = create_scatter(delay_for_currently_adding, self.times[int(currently_adding)])
+           # self.files_made.append(add_to_file(this_div, "edit me", "more_data_template", currently_adding))
+           # amount_done += 1
+           # x += 1
+       # print("More information pages have all loaded")
 
-    # Gets more detailed informaiton on each rid(primary key for a service on a specific day)
-    # todo splits this into mutiple fucntions and add classes
-    def each_individaul_service_info(self, rids, schedule_time, operator, arrival_time, total_number_of_services,
-                                     done_services,
-                                     total_rids_list
-                                     , currently_examining):
-        actual_times = []
-        destination_times = []
-        total_services_current = len(rids)
-        average = average_for_rids(total_rids_list, total_services_current)
-        new_services = 0
-        for x in rids:
-            new_services += 1
-            percent_done = int(((done_services + new_services) / (average * total_number_of_services) * 100))
-            sys.stdout.write('\r')
-            sys.stdout.write(str(percent_done) + "%" + "   ")
-            sys.stdout.flush()
-        # Below turns all of the raw data into more user friendly data, then saves the html table of this data
-        self.add_line.append(
-            line_to_HTML(schedule_time, average, operator, total_services_current, cancelled, average_desti,
-                         journey_time, percent_delayed_service, currently_examining))
-        return new_services, total_services_current
 
 
 class overall_service():
