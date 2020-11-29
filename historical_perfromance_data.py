@@ -216,7 +216,7 @@ class Stations(): #todo need a new name for this class
         self.files_made.append(add_to_file(self.add_line, "edit me", "table", "OPENME"))
   #      print("Outputting this data to a file which is about to open, more information pages are still loading")
    #     webbrowser.open('file://' + os.path.realpath(
-            "OPENME.html"))  # Use this so that it will still work when this project is moved to a different
+        #    "OPENME.html"))  # Use this so that it will still work when this project is moved to a different
     #    # computer, or to a differtn place on system
      #   print(
        #     "If the file didn't open, open the file named OPENME.html which has been created in the directory the "
