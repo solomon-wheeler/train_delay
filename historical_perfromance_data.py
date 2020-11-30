@@ -1,6 +1,6 @@
 # # You need these details to acesss the hsp API, you can get an account from here: www.opendata.nationalrail.co.uk. Username will be your email for this API
-username = "solly.wheeler@gmail.com"  # todo store attiributes
-password = ""
+username = "solly.wheeler@gmail.com"  #todo store attiributes
+password = "HmIb2i4qcn*f"
 headers = {"Content-Type": "application/json"}  # todo create collection of objects
 
 import requests
@@ -32,20 +32,6 @@ def average_for_rids(total_rids_list, total_services_current):
 
 
 # This creates the html code for the scatter plot of delays, using plotly express
-def create_scatter(delays_data, scheduled_time):
-    number_of_each_delay = [[this_one, delays_data.count(this_one)] for this_one in set(delays_data)]
-    size = []  # Todo this is a bit of a bodge, could be made better?
-    for x in number_of_each_delay:  # THis
-        size.append(5)  # ANd his
-    this_data = pandas.DataFrame(number_of_each_delay, columns=['Delay(Minutes)', 'Number of occurrences'])
-    title = "Scatter plot of train delay occurunces for " + str(scheduled_time)
-    print(title)
-    fig = plotly.scatter(this_data, x="Delay(Minutes)", y="Number of occurrences", size=size,
-                         title=title)
-    html_for_this_service = fig.to_html(fig, full_html=False, include_plotlyjs="cdn", include_mathjax=False)
-    html_for_this_service = [html_for_this_service]
-    return html_for_this_service
-
 
 # This allows for the user to search for stations using there actual name, and returns there CRS CODE
 def to_crs(crs_code_in):
@@ -72,15 +58,15 @@ def to_crs(crs_code_in):
 # This takes the average delay for a service and returns the colour
 # todo make colours change based upon data
 class website():
-    def __init__(self):
+    def __init__(self,tag,template_name,output_name,):
         self.lines_to_add = []
-        self.tag = "edit me"
-        self.template_name = "table"
-        self.output_name = "OPENME"
+        self.tag = tag
+        self.template_name = template_name
+        self.output_name = output_name
         self.files_made = []
     def line_to_HTML(self,schedule_time, average, operator, total_services, cancelled, average_desti,
                      journey_time,
-                     percent_delayed_service):  # Could make this so that colour gradient is based on services, so really
+                     percent_delayed_service,service_id):  # Could make this so that colour gradient is based on services, so really
         print(average)
         # unreilaible lines arent just all red, colour graident?
         colour_arival_delay = self.delay_colour(average)
@@ -92,7 +78,11 @@ class website():
             cancelled) + '</td><td bgcolor=' + str(colour_destination_delay) + '>' + str(
             average_desti) + '</td><td>' + str(journey_time) + '</td><td>' + str(
             percent_delayed_service) + '</td><td><a href = ' + str(
-            services_to_examine) + '.html' + '> More info </a> </td></tr>')
+            service_id) + '.html' + '> More info </a> </td></tr>')
+
+    def set_line(self,line_to_add):
+        self.lines_to_add.append(line_to_add)
+
     def delay_colour(self,average_delay):
         try:
             if average_delay <= 0:  # SHould be int vales from average or 0
@@ -164,7 +154,7 @@ def delay(schedule_time, ThisTime):
 
 
 
-class Stations(): #todo need a new name for this class
+class Journey_Info(): #todo need a new name for this class
     def __init__(self):
         self.payload = None
         self.data = None
@@ -202,33 +192,6 @@ class Stations(): #todo need a new name for this class
     def get_json_data(self):
         return self.data
 
-    def get_station_data(self):  # These aren't actually in this class but are in main which feels wrong.
-        return self.start, self.destination
-
-
-####not added to rewrite yet #####
-    # Takes the data about what services are available and allows the user to choose which ones they want more detailed infromation on
-
-   # def each_timetabeled_info(self, services_to_examine):
-#
-#
- #       # todo beneath should have it's own function within website class
-        self.files_made.append(add_to_file(self.add_line, "edit me", "table", "OPENME"))
-  #      print("Outputting this data to a file which is about to open, more information pages are still loading")
-   #     webbrowser.open('file://' + os.path.realpath(
-        #    "OPENME.html"))  # Use this so that it will still work when this project is moved to a different
-    #    # computer, or to a differtn place on system
-     #   print(
-       #     "If the file didn't open, open the file named OPENME.html which has been created in the directory the "
-      #      "python file is in, using a browser")
-       # x = 0
-        #for currently_adding in services_to_examine:  # Goes through each service the user has selected and creates then saves the scatter chart for that
-         #   delay_for_currently_adding = self.all_delays[x]
-          #  this_div = create_scatter(delay_for_currently_adding, self.times[int(currently_adding)])
-           # self.files_made.append(add_to_file(this_div, "edit me", "more_data_template", currently_adding))
-           # amount_done += 1
-           # x += 1
-       # print("More information pages have all loaded")
 
 
 
@@ -246,6 +209,8 @@ class overall_service():
         self.average_delay_value_end =None
         self.amount_cancelled = None
         self.percent_delayed = None
+        self.StartDelays =[]
+        self.EndDelays = []
 
     def get_start_time(self):
         return self.start_time
@@ -253,27 +218,25 @@ class overall_service():
     def get_individual_id(self):
         return self.individaul_id
     def get_summary(self):
-        return (self.start_time, self.average_delay_value_start, self.operator, self.num_rids, self.amount_cancelled, self.average_delay_value_end,self.journey_time, self.percent_delayed)
+        return (self.start_time, self.average_delay_value_start, self.operator, self.num_rids, self.amount_cancelled, self.average_delay_value_end,self.journey_time,self.percent_delayed,self.individaul_id)
 
     def add_individual_services_skeleton(self):
         for this_indi_train in self.individual_rid_list:
             self.individual_services.append(individual_service(this_indi_train))
 
     def add_indi_service_data(self):
-        StartDelays =[]
-        EndDelays = []
         for this_indi_train in self.individual_services:
             this_indi_train.format_data()
             this_indi_train.delays(self.start_time, self.desti_time)
             delay_info = this_indi_train.get_delays()
-            StartDelays.append(delay_info[0])
-            EndDelays.append(delay_info[1])
-        start_delay_cancelled = self.average_delay(StartDelays)
+            self.StartDelays.append(delay_info[0])
+            self.EndDelays.append(delay_info[1])
+    def add_overall_delay_data(self):
+        start_delay_cancelled = self.average_delay(self.StartDelays)
         self.average_delay_value_start = start_delay_cancelled[0]
         self.amount_cancelled = start_delay_cancelled[1]
         self.percent_delayed = start_delay_cancelled[2]
-        self.average_delay_value_end = self.average_delay(EndDelays)[0]
-
+        self.average_delay_value_end = self.average_delay(self.EndDelays)[0]
     def average_delay(self,all_delays):  # this takes a list of each delay and works out the average, not including days where the train was cancelled
         total = 0
         sample_size = 0
@@ -302,6 +265,19 @@ class overall_service():
         except ZeroDivisionError:
             cancelled = "no data"
         return(this_average_delay_value,cancelled,percent_delayed)
+    def create_scatter(self):
+        number_of_each_delay = [[this_one, self.StartDelays.count(this_one)] for this_one in set(self.StartDelays)]
+        size = []  # Todo this is a bit of a bodge, could be made better?
+        for x in number_of_each_delay:  # THis
+            size.append(5)  # ANd his
+        this_data = pandas.DataFrame(number_of_each_delay, columns=['Delay(Minutes)', 'Number of occurrences'])
+        title = "Scatter plot of train delay occurunces for " + str(self.start_time)
+        print(title)
+        fig = plotly.scatter(this_data, x="Delay(Minutes)", y="Number of occurrences", size=size,
+                             title=title)
+        html_for_this_service = fig.to_html(fig, full_html=False, include_plotlyjs="cdn", include_mathjax=False)
+        html_for_this_service = [html_for_this_service]
+        return html_for_this_service
 
 class individual_service():
     def __init__(self, this_rid):
@@ -335,11 +311,11 @@ print("This service is Powered By national rail enquiries, more info can be foun
 start = to_crs(str(input("Name or CRS code of start station")))
 destination = to_crs(str(input("Name or CRS code of the destination station")))
 
-first_station = Stations()
+first_station = Journey_Info()
 first_station.create_payload()  # This is creating the payload to be sent to the API, taking basic information from the user and using this to create the payload
 first_station.source_data()  # This queires the api for the overview data (info on number of jounries found at certain times, but not delay info for each individaul service
 first_station.get_json_data()
-html_output = website()
+overall_output = website("edit me","table","OPENME")
 ##intitalising variables##
 tolerance = 1
 invalid_times = []
@@ -378,11 +354,24 @@ if service_choice != "ALL":
 for x in all_services:
     x.add_individual_services_skeleton()
     x.add_indi_service_data()
-    html_output.line_to_HTML(x.get_summary()[0],x.get_summary()[1],x.get_summary()[2],x.get_summary()[3],x.get_summary()[4],x.get_summary()[5],x.get_summary()[6],x.get_summary()[7])
-html_output.add_to_file()
-html_output.open_website()
+    x.add_overall_delay_data()
+    this_data = x.get_summary()
+    overall_output.line_to_HTML(this_data[0], this_data[1], this_data[2], this_data[3], this_data[4], this_data[5], this_data[6], this_data[7],this_data[8])
+overall_output.add_to_file()
+overall_output.open_website()
+num_done = 0
+more_info_pages = []
+for x in all_services:
+    this_more_detail_page = website("edit me","more_data_template",x.get_individual_id())
+    more_info_pages.append(this_more_detail_page)
+    this_more_detail_page.set_line(x.create_scatter())
+    this_more_detail_page.add_to_file()
+    num_done += 1
+
 input(
     "The program will delete the files it has made (except templates) once you're done, just input anything and the "
     "program will delete the files then stop")
-for currently_deleting in html_output.get_files_made():
+for currently_deleting in overall_output.get_files_made():
     cleanup(currently_deleting)
+for x in more_info_pages:
+    cleanup(x.get_files_made())
