@@ -1,7 +1,5 @@
 # # You need these details to acesss the hsp API, you can get an account from here: www.opendata.nationalrail.co.uk. Username will be your email for this API
-username = "solly.wheeler@gmail.com"  # todo store attiributes
-password = ""
-headers = {"Content-Type": "application/json"}
+headers = {"Content-Type": "application/json"}  # todo move to class atribute
 
 import requests
 import json
@@ -13,6 +11,30 @@ import plotly.express as plotly
 import pandas
 from requests.auth import \
     HTTPBasicAuth
+
+def explain_error(code):
+    if "403" in code:
+        input("The Username and Password inputted where not correct, check the crednetials file has only the username and password after the =, and that you have permission to use the api with your acccount, then input anything once youve fixed it")
+    elif "400" in code: #this probably could be more helpful
+        input("One of the input parameters was no in the correct format, please run the program again and make sure all inputs are only alphanurmerial characters and are valid for your jounrye")
+        exit()
+    elif "429" in code:
+        input("You have been rate limited because you've made too many requests to the api, please wait before trying again")
+    elif "503" in code or "500" in code:
+        print("Unfortunately there is a problem with the api at the moment, please try again later")
+        exit()
+
+
+def get_api_credentials():
+    credentials_file = open("credentials.txt", "r")
+    credentials = []
+    for this_line in credentials_file:
+        credentials.append((this_line.strip()).split("=")[1])
+    if len(credentials) != 2:
+        input(
+            "THere has been an erorr in the credentials file, please make sure it is in the correct format with nothin except the useraname password after the =, then press anything to continue" )  # todo make this slightly more specific to explain why eeror has occured
+        return get_api_credentials()   #Is this recusion helpful??
+    return credentials[0],credentials[1]
 
 
 # used to delete files made by the program once done
@@ -42,14 +64,15 @@ def to_crs(crs_code_in):
         return "RDG"
 
     parameters_crs = {
-        "station": low_crscodein}  ####this is not working because API has been depreacted, need to update to a new API :((
-    url_crs = "https://api.departureboard.io/api/v2.0/getStationBasicInfo/"
-    r = requests.get(url=url_crs, params=parameters_crs)
+        "id": low_crscodein}  ####this is not working because API has been depreacted, need to update to a new API :((
+    url_crs = "https://0hvzyzu9q6.execute-api.eu-west-1.amazonaws.com/beta/locs-js"
+    header_crs = {"X-Auth-Token": "ea8b2166-058c-4689-a72c-dd4b9b84cb82"}
+    r = requests.put(url=url_crs, headers =header_crs, params=parameters_crs)
     print(r)
     crsdata = r.json()
     print(crsdata)
     try:
-        return crsdata[0]['crsCode']
+        return crsdata[0]['crs']
     except IndexError:
         return to_crs(str(input("There were no results found for that station name please try again, and check for "
                                 "any typos.")))  # Recursion in case the user inputs invalid data
@@ -193,9 +216,13 @@ class Journey_Info():  # todo need a new name for this class
     # Gets the data from the the api and saves it in self.data
     def source_data(self):
         url = "https://hsp-prod.rockshore.net/api/v1/serviceMetrics"
-        self.data = requests.post(url, auth=HTTPBasicAuth(username, password),
+        credentials = get_api_credentials()
+        self.data = requests.post(url, auth=HTTPBasicAuth(username,password),
                                   headers=headers, data=self.payload)
-        print(self.data)
+        if "200" not in str(self.data.status_code):
+            print("There has been an error with that request")
+            explain_error(str(self.data.status_code))
+            self.source_data()
         self.data = json.loads(self.data.text)  # could change this to .json()?
 
     def get_json_data(self):
@@ -236,8 +263,9 @@ class overall_service():
             # could put below in its very own function?
             sys.stdout.write('\r')
             sys.stdout.write(str(int((amount_done / self.num_rids) * 100)) + "%")  # str(int) is abit werid
-            sys.stdout.flush()
+            #sys.stdout.flush()
             amount_done += 1
+        sys.stdout.write('\r')
 
     def add_indi_service_data(self):
         for this_indi_train in self.individual_services:
@@ -246,7 +274,6 @@ class overall_service():
             delay_info = this_indi_train.get_delays()
             self.StartDelays.append(delay_info[0])
             self.EndDelays.append(delay_info[1])
-
 
     def add_overall_delay_data(self):
         start_delay_cancelled = self.average_delay(self.StartDelays)
@@ -301,7 +328,7 @@ class individual_service():
     def __init__(self, this_rid):
         self.rid = this_rid
         self.data = json.loads((requests.post("https://hsp-prod.rockshore.net/api/v1/serviceDetails",
-                                              auth=HTTPBasicAuth(username, password),
+                                              auth=HTTPBasicAuth(username,password),
                                               headers=headers,
                                               data=json.dumps({"rid": this_rid})).text))
         self.start_actual_time = None
@@ -326,24 +353,27 @@ class individual_service():
 
 
 ### main
+username,password =  get_api_credentials()
+
 print("This service is Powered By national rail enquiries, more info can be found at www.nationalrail.co.uk")
 start = to_crs(str(input("Name or CRS code of start station")))
 destination = to_crs(str(input("Name or CRS code of the destination station")))
 
-first_station = Journey_Info()
-first_station.create_payload()  # This is creating the payload to be sent to the API, taking basic information from the user and using this to create the payload
-first_station.source_data()  # This queires the api for the overview data (info on number of jounries found at certain times, but not delay info for each individaul service
-first_station.get_json_data()
-overall_output = website("edit me", "table", "OPENME")
+This_Journey = Journey_Info()
+This_Journey.create_payload()  # This is creating the payload to be sent to the API, taking basic information from the user and using this to create the payload
+This_Journey.source_data()  # This queires the api for the overview data (info on number of jounries found at certain times, but not delay info for each individaul service
+overall_output = website("edit me","table","OPENME")
+
 ##intitalising variables##
 tolerance = 1
 invalid_times = []
 services_found = 0
+
 ###
 
 all_services = []
 invalid_service_ids = []
-for x in first_station.get_json_data()[
+for x in This_Journey.get_json_data()[
     'Services']:  # split into two one creating list, one letting the user choose information
     num_rids = int((x['serviceAttributesMetrics']['matched_services']))
     if num_rids < 2:
@@ -366,7 +396,6 @@ service_choice = str(
     input(
         "Input a single number for info on just that, numbers with commas in between them for multiple "
         "services or input ALL for information on all of them"))
-services_to_examine = []
 if service_choice != "ALL":
     services_chosen = service_choice.split(",")
     for all_services_found in all_services:
@@ -374,19 +403,19 @@ if service_choice != "ALL":
             all_services.pop(
                 all_services_found.get_individual_id())  # todo not sure if clases are gertting deleted here so might need to deleete them first to make it more memory efficent
 for x in all_services:
-    print("Getting Data on Service 1")
+    print("Getting Data on Service" + str(x.get_individual_id()))
     x.add_individual_services_skeleton()
     x.add_indi_service_data()
     x.add_overall_delay_data()
     this_data = x.get_summary()
     overall_output.line_to_HTML(this_data[0], this_data[1], this_data[2], this_data[3], this_data[4], this_data[5],
                                 this_data[6], this_data[7], this_data[8])
-
-
+sys.stdout.flush()
 overall_output.add_to_file()
 overall_output.open_website()
 more_info_pages = []
-print("TaDa, it should be done! If the page hasn't opened navigate to the directory this folder is in and open" + str(overall_output.get_files_made()) + "The program will now work on the more data sections")
+print("TaDa, it should be done! If the page hasn't opened navigate to the directory this folder is in and open" + str(
+    overall_output.get_files_made()) + "The program will now work on the more data sections")
 for x in all_services:
     this_more_detail_page = website("edit me", "more_data_template", x.get_individual_id())
     more_info_pages.append(this_more_detail_page)
