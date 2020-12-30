@@ -1,4 +1,6 @@
 # # You need these details to acesss the hsp API, you can get an account from here: www.opendata.nationalrail.co.uk. Username will be your email for this API
+from pandas import DataFrame
+
 headers = {"Content-Type": "application/json"}  # todo move to class atribute
 
 import requests
@@ -7,8 +9,8 @@ import sys
 import webbrowser
 import \
     os
-import plotly.express as plotly
 import pandas
+import plotly.express as plotly
 from requests.auth import \
     HTTPBasicAuth
 
@@ -62,21 +64,24 @@ def to_crs(crs_code_in):
     low_crscodein = crs_code_in.lower()
     if low_crscodein == "reading":  # This is because reading always returns reading west, even when you don't put this in
         return "RDG"
-
-    parameters_crs = {
-        "id": low_crscodein}  ####this is not working because API has been depreacted, need to update to a new API :((
-    url_crs = "https://0hvzyzu9q6.execute-api.eu-west-1.amazonaws.com/beta/locs-js"
-    header_crs = {"X-Auth-Token": "ea8b2166-058c-4689-a72c-dd4b9b84cb82"}
-    r = requests.put(url=url_crs, headers =header_crs, params=parameters_crs)
-    print(r)
-    crsdata = r.json()
-    print(crsdata)
-    try:
-        return crsdata[0]['crs']
-    except IndexError:
-        return to_crs(str(input("There were no results found for that station name please try again, and check for "
-                                "any typos.")))  # Recursion in case the user inputs invalid data
-
+    crs_data =  open("station_codes.csv","r")
+    options = []
+    for line in crs_data: #cannot use a binary search here because list is ordeered, but user might search for "Waterloo" instead of London Waterloo etc, so just checking by letter's is not possible
+        line = line.split(",")
+        if low_crscodein in line[0].lower():
+            options.append([line[0],line[1].strip()])
+    if len(options) == 0:
+        print("That station could not be found")
+        return to_crs(str(input("Please input the station name again")))
+    if len(options) == 1:
+        return options[0][1]
+    num_through = 0
+    print("The staition's found where:")
+    for each_found_station in options:
+        print(str(num_through) + " : " + each_found_station[0])
+        num_through += 1
+    choice = int(input("Please input the number of the correct station"))
+    return options[choice][1]
 
 # This takes the average delay for a service and returns the colour
 # todo make colours change based upon data
@@ -186,7 +191,7 @@ def delay(schedule_time, ThisTime):
     return delay
 
 
-class Journey_Info():  # todo need a new name for this class
+class Journey_Info:  # todo need a new name for this class
     def __init__(self):
         self.payload = None
         self.data = None
@@ -216,7 +221,7 @@ class Journey_Info():  # todo need a new name for this class
     # Gets the data from the the api and saves it in self.data
     def source_data(self):
         url = "https://hsp-prod.rockshore.net/api/v1/serviceMetrics"
-        credentials = get_api_credentials()
+        #credentials = get_api_credentials()
         self.data = requests.post(url, auth=HTTPBasicAuth(username,password),
                                   headers=headers, data=self.payload)
         if "200" not in str(self.data.status_code):
@@ -229,7 +234,7 @@ class Journey_Info():  # todo need a new name for this class
         return self.data
 
 
-class overall_service():
+class overall_service:
     def __init__(self, this_service_id, this_start_time, this_end_time, number_found, rids_found, this_operator):
         self.individaul_id = this_service_id
         self.start_time = this_start_time
@@ -309,14 +314,14 @@ class overall_service():
         try:
             percent_delayed = int((total_industry_delayed / (sample_size)) * 100)
         except ZeroDivisionError:
-            cancelled = "no data"
+            cancelled = "no data"   #todo check this is the correct value
         return (this_average_delay_value, cancelled, percent_delayed)
 
     def create_scatter(self):
         number_of_each_delay = [[this_one, self.StartDelays.count(this_one)] for this_one in set(self.StartDelays)]
         size = [5 for i in range(len(number_of_each_delay))]  # Todo this is a bit of a bodge, could be made better?
-        this_data = pandas.DataFrame(number_of_each_delay, columns=['Delay(Minutes)', 'Number of occurrences'])
-        title = "Scatter plot of train delay occurunces for " + str(self.start_time)
+        this_data = DataFrame(number_of_each_delay, columns=['Delay(Minutes)', 'Number of occurrences'])
+        title = "Scatter plot of train delay occurrences for " + str(self.start_time)
         fig = plotly.scatter(this_data, x="Delay(Minutes)", y="Number of occurrences", size=size,
                              title=title)
         html_for_this_service = fig.to_html(fig, full_html=False, include_plotlyjs="cdn", include_mathjax=False)
@@ -324,7 +329,7 @@ class overall_service():
         return html_for_this_service
 
 
-class individual_service():
+class individual_service:
     def __init__(self, this_rid):
         self.rid = this_rid
         self.data = json.loads((requests.post("https://hsp-prod.rockshore.net/api/v1/serviceDetails",
@@ -380,7 +385,7 @@ for x in This_Journey.get_json_data()[
         invalid_service_ids.append(services_found)
         invalid_times.append(x['serviceAttributesMetrics']['gbtt_ptd'])
     else:
-        ##   self.time_to_overall.append(services_found)   havent added this in becasuse im not sure what it does
+        ##   self.time_to_overall.append(services_found)   haven't added this in becasuse im not sure what it does
         all_services.append(overall_service(services_found, x['serviceAttributesMetrics']['gbtt_ptd'],
                                             x['serviceAttributesMetrics']['gbtt_pta'], num_rids,
                                             x['serviceAttributesMetrics']['rids'],
@@ -397,11 +402,13 @@ service_choice = str(
         "Input a single number for info on just that, numbers with commas in between them for multiple "
         "services or input ALL for information on all of them"))
 if service_choice != "ALL":
+    popped = 0
     services_chosen = service_choice.split(",")
     for all_services_found in all_services:
         if str(all_services_found.get_individual_id()) not in services_chosen:
             all_services.pop(
-                all_services_found.get_individual_id())  # todo not sure if clases are gertting deleted here so might need to deleete them first to make it more memory efficent
+                all_services_found.get_individual_id() - popped)  # todo not sure if clases are gertting deleted here so might need to deleete them first to make it more memory efficent
+            popped += 1
 for x in all_services:
     print("Getting Data on Service" + str(x.get_individual_id()))
     x.add_individual_services_skeleton()
@@ -428,4 +435,4 @@ input(
 for currently_deleting in overall_output.get_files_made():
     cleanup(currently_deleting)
 for x in more_info_pages:
-    cleanup(x.get_files_made())
+    cleanup((x.get_files_made()[0]))
