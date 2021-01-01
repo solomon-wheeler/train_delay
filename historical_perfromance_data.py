@@ -64,7 +64,7 @@ def to_crs(crs_code_in):
     low_crscodein = crs_code_in.lower()
     if low_crscodein == "reading":  # This is because reading always returns reading west, even when you don't put this in
         return "RDG"
-    crs_data =  open("station_codes.csv","r")
+    crs_data =  open("NR_media/station_codes.csv", "r")
     options = []
     for line in crs_data: #cannot use a binary search here because list is ordeered, but user might search for "Waterloo" instead of London Waterloo etc, so just checking by letter's is not possible
         line = line.split(",")
@@ -191,7 +191,7 @@ def delay(schedule_time, ThisTime):
     return delay
 
 
-class Journey_Info:  # todo need a new name for this class
+class Journey_Info:
     def __init__(self):
         self.payload = None
         self.data = None
