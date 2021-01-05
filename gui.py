@@ -25,7 +25,8 @@ class input_canvas():
         self.label2.grid(row=2, column=0, pady=5, padx=2)
         self.label3.grid(row=4, column=0, pady=5, padx=2)
     def add_choice_buttons(self, list_of_names):
-        pass
+        self.choice_box1 = tkin.combobox(self.input_gui, values = list_of_names)
+        self.choice_box1.grid(row =1 , column = 1)
 
 
 

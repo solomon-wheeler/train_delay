@@ -38,6 +38,27 @@ def get_api_credentials():
         return get_api_credentials()   #Is this recusion helpful??
     return credentials[0],credentials[1]
 
+#used to sort a list of values, most efficent from tested of merge and heap for train times
+def quicksort(list_to_sort):
+    different = False  # see below for use of this variable at "different == false"
+    length = len(list_to_sort)
+    if length < 2:  # If length is less than 1 then there are either no values in the list or 1, so no further anaylsis is needed
+        return list_to_sort
+    lower_list = []
+    higher_list = []
+    pivot = list_to_sort.pop()  # This get's the last element from the list, to be used as a pivot. this was tested with median of first, mid, last. But last is more efficent on average.
+    for this_value in list_to_sort:
+        if this_value > pivot:
+            higher_list.append(this_value)
+            different = True
+        elif this_value == pivot:
+            lower_list.append(this_value)
+        else:
+            lower_list.append(this_value)
+            different = True
+    if not different:  # This is included because reliable trains will have many low numbers, this means we don't have to recursively go through all and can just return the list of all the same number
+        return list_to_sort + [ pivot]
+    return quicksort(lower_list) + [pivot] + quicksort(higher_list)
 
 # used to delete files made by the program once done
 def cleanup(file_to_delete):
@@ -45,14 +66,14 @@ def cleanup(file_to_delete):
 
 
 # This returns the average amount of services found for each schedule time before and the one currently being done
-def average_for_rids(total_rids_list, total_services_current):
-    services_done_before_total = 0
-    number_of_services_before = 0
-    for services_done_before in total_rids_list:
-        services_done_before_total += services_done_before
-        number_of_services_before += 1
-    total_for_all_services = services_done_before_total + total_services_current
-    return total_for_all_services / (number_of_services_before + 1)
+#def average_for_rids(total_rids_list, total_services_current):
+ #   services_done_before_total = 0
+   # number_of_services_before = 0
+  #  for services_done_before in total_rids_list:
+    #    services_done_before_total += services_done_before
+     #   number_of_services_before += 1
+    #total_for_all_services = services_done_before_total + total_services_current
+#    return total_for_all_services / (number_of_services_before + 1)
 
 
 # This creates the html code for the scatter plot of delays, using plotly express
@@ -191,6 +212,7 @@ def delay(schedule_time, ThisTime):
     return delay
 
 
+
 class Journey_Info:
     def __init__(self):
         self.payload = None
@@ -327,6 +349,20 @@ class overall_service:
         html_for_this_service = fig.to_html(fig, full_html=False, include_plotlyjs="cdn", include_mathjax=False)
         html_for_this_service = [html_for_this_service]
         return html_for_this_service
+
+    def get_percentage_later(
+            sorted_list):  # this function takes a sorted list and returns for each value, or group of equal values, the percentage of trains that where more delayed than this value.
+        value_and_percentage = []
+        length = len(sorted_list)
+        for i in range(0, length):
+            if i == (length - 1) or sorted_list[i] != sorted_list[i + 1]:
+                percentage_after = ((length - i) / length) * 100
+                value_and_percentage.append([sorted_list[i], percentage_after])
+        return value_and_percentage
+
+    def create_percent_or_more_line_graph(self): #Code a merge sort here
+        for this_time_check in range (1, max(self.end_time)): #this ones end time becuase it's looking at chance of making connection, which depends on time of arrival at destianation station
+            pass #todo change
 
 
 class individual_service:
