@@ -1,15 +1,12 @@
-# # You need these details to acesss the hsp API, you can get an account from here: www.opendata.nationalrail.co.uk. Username will be your email for this API
-from pandas import DataFrame
 
 headers = {"Content-Type": "application/json"}  # todo move to class atribute
-
 from scipy import stats
 import requests
 import json
 import sys
 import webbrowser
 import os
-import pandas
+from pandas import DataFrame
 import plotly.express as plotly
 from requests.auth import \
     HTTPBasicAuth
@@ -26,7 +23,7 @@ def explain_error(code):
         print("Unfortunately there is a problem with the api at the moment, please try again later")
         exit()
 
-
+# # You need these details to acesss the hsp API, you can get an account from here: www.opendata.nationalrail.co.uk. Username will be your email for this API
 def get_api_credentials():
     credentials_file = open("credentials.txt", "r")
     credentials = []
@@ -91,15 +88,6 @@ def delay(schedule_time, ThisTime):
                 "happen then there has been an error")
     return delay
 
-# This returns the average amount of services found for each schedule time before and the one currently being done
-#def average_for_rids(total_rids_list, total_services_current):
- #   services_done_before_total = 0
-   # number_of_services_before = 0
-  #  for services_done_before in total_rids_list:
-    #    services_done_before_total += services_done_before
-     #   number_of_services_before += 1
-    #total_for_all_services = services_done_before_total + total_services_current
-#    return total_for_all_services / (number_of_services_before + 1)
 
 
 # This creates the html code for the scatter plot of delays, using plotly express
@@ -109,8 +97,6 @@ def to_crs(crs_code_in):
     if crs_code_in.isupper() is True and len(crs_code_in) == 3:  # this causes failure if crs code is not in caps??
         return crs_code_in
     low_crscodein = crs_code_in.lower()
-    if low_crscodein == "reading":  # This is because reading always returns reading west, even when you don't put this in
-        return "RDG"
     crs_data =  open("NR_media/station_codes.csv", "r")
     options = []
     for line in crs_data: #cannot use a binary search here because list is ordeered, but user might search for "Waterloo" instead of London Waterloo etc, so just checking by letter's is not possible
