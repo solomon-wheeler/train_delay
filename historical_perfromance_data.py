@@ -3,12 +3,12 @@ from pandas import DataFrame
 
 headers = {"Content-Type": "application/json"}  # todo move to class atribute
 
+from scipy import stats
 import requests
 import json
 import sys
 import webbrowser
-import \
-    os
+import os
 import pandas
 import plotly.express as plotly
 from requests.auth import \
@@ -39,7 +39,7 @@ def get_api_credentials():
     return credentials[0],credentials[1]
 
 #used to sort a list of values, most efficent from tested of merge and heap for train times
-def quicksort(list_to_sort):
+def quicksort(list_to_sort): #todo this could be made more efficent by using median train delay across uk instead of just getting the last value
     different = False  # see below for use of this variable at "different == false"
     length = len(list_to_sort)
     if length < 2:  # If length is less than 1 then there are either no values in the list or 1, so no further anaylsis is needed
@@ -64,6 +64,32 @@ def quicksort(list_to_sort):
 def cleanup(file_to_delete):
     os.remove(file_to_delete)
 
+# This function takes the scheduled time (should be one value) and a list of the actual times, it compares them and returns a list of how delayed each service was.
+def delay(schedule_time, ThisTime):
+    hours_schedule = int(schedule_time[:2])
+    minutes = int(schedule_time[-2:])
+    comb_schedule = (hours_schedule * 60) + minutes
+    try:
+        hours_actual = int(ThisTime[:2])
+    except ValueError:
+        delay = "X"
+    else:
+        minutes_actual = int(ThisTime[-2:])
+        comb_actual = (hours_actual * 60) + minutes_actual
+        delay = comb_actual - comb_schedule
+        if delay < -720 and hours_schedule > hours_actual:  # This is incase the delay takes the time over the day marker, wont work if train is early by 12 hours, or if delayed by 19 hours
+            comb_actual += 1440  # add all the hours from the day to the delay time
+            delay = comb_actual - comb_schedule
+            print(
+                "THe code thinks that one of the delays took the train time over the date marker, if this didnt "
+                "happen then there has been an error")
+        elif delay < -720 and hours_actual > hours_schedule:  # This is incase the delay takes the time over the day marker, wont work if train is early by 12 hours, or if delayed by 19 hours
+            comb_schedule += 1440  # add all the hours from the day to the delay time
+            delay = comb_actual - comb_schedule
+            print(
+                "THe code thinks that one of the delays took the train time over the date marker, if this didnt "
+                "happen then there has been an error")
+    return delay
 
 # This returns the average amount of services found for each schedule time before and the one currently being done
 #def average_for_rids(total_rids_list, total_services_current):
@@ -136,7 +162,7 @@ class website():
 
     def delay_colour(self, average_delay):
         try:
-            if average_delay <= 0:  # SHould be int vales from average or 0
+            if average_delay <= 0:  # todo SHould be int vales from average or 0
                 colour = "green"
             elif 1 <= average_delay < 3:
                 colour = "#FFC300"
@@ -183,36 +209,6 @@ class website():
     def get_files_made(self):
         return self.files_made
 
-
-# This function takes the scheduled time (should be one value) and a list of the actual times, it compares them and returns a list of how delayed each service was.
-def delay(schedule_time, ThisTime):
-    hours_schedule = int(schedule_time[:2])
-    minutes = int(schedule_time[-2:])
-    comb_schedule = (hours_schedule * 60) + minutes
-    try:
-        hours_actual = int(ThisTime[:2])
-    except ValueError:
-        delay = "X"
-    else:
-        minutes_actual = int(ThisTime[-2:])
-        comb_actual = (hours_actual * 60) + minutes_actual
-        delay = comb_actual - comb_schedule
-        if delay < -720 and hours_schedule > hours_actual:  # This is incase the delay takes the time over the day marker, wont work if train is early by 12 hours, or if delayed by 19 hours
-            comb_actual += 1440  # add all the hours from the day to the delay time
-            delay = comb_actual - comb_schedule
-            print(
-                "THe code thinks that one of the delays took the train time over the date marker, if this didnt "
-                "happen then there has been an error")
-        elif delay < -720 and hours_actual > hours_schedule:  # This is incase the delay takes the time over the day marker, wont work if train is early by 12 hours, or if delayed by 19 hours
-            comb_schedule += 1440  # add all the hours from the day to the delay time
-            delay = comb_actual - comb_schedule
-            print(
-                "THe code thinks that one of the delays took the train time over the date marker, if this didnt "
-                "happen then there has been an error")
-    return delay
-
-
-
 class Journey_Info:
     def __init__(self):
         self.payload = None
@@ -258,9 +254,9 @@ class Journey_Info:
 
 class overall_service:
     def __init__(self, this_service_id, this_start_time, this_end_time, number_found, rids_found, this_operator):
-        self.individaul_id = this_service_id
+        self.individual_id = this_service_id
         self.start_time = this_start_time
-        self.desti_time = this_end_time
+        self.destination_time = this_end_time
         self.num_rids = number_found
         self.individual_rid_list = rids_found
         self.operator = this_operator
@@ -270,18 +266,18 @@ class overall_service:
         self.average_delay_value_end = None
         self.amount_cancelled = None
         self.percent_delayed = None
-        self.StartDelays = []
-        self.EndDelays = []
+        self.start_delays = []
+        self.end_delays = []
 
     def get_start_time(self):
         return self.start_time
 
     def get_individual_id(self):
-        return self.individaul_id
+        return self.individual_id
 
     def get_summary(self):
         return (self.start_time, self.average_delay_value_start, self.operator, self.num_rids, self.amount_cancelled,
-                self.average_delay_value_end, self.journey_time, self.percent_delayed, self.individaul_id)
+                self.average_delay_value_end, self.journey_time, self.percent_delayed, self.individual_id)
 
     def add_individual_services_skeleton(self):
         amount_done = 1
@@ -297,17 +293,17 @@ class overall_service:
     def add_indi_service_data(self):
         for this_indi_train in self.individual_services:
             this_indi_train.format_data()
-            this_indi_train.delays(self.start_time, self.desti_time)
+            this_indi_train.delays(self.start_time, self.destination_time)
             delay_info = this_indi_train.get_delays()
-            self.StartDelays.append(delay_info[0])
-            self.EndDelays.append(delay_info[1])
+            self.start_delays.append(delay_info[0])
+            self.end_delays.append(delay_info[1])
 
     def add_overall_delay_data(self):
-        start_delay_cancelled = self.average_delay(self.StartDelays)
+        start_delay_cancelled = self.average_delay(self.start_delays)
         self.average_delay_value_start = start_delay_cancelled[0]
         self.amount_cancelled = start_delay_cancelled[1]
         self.percent_delayed = start_delay_cancelled[2]
-        self.average_delay_value_end = self.average_delay(self.EndDelays)[0]
+        self.average_delay_value_end = self.average_delay(self.end_delays)[0]
 
     def average_delay(self,
                       all_delays):  # this takes a list of each delay and works out the average, not including days where the train was cancelled
@@ -340,7 +336,7 @@ class overall_service:
         return (this_average_delay_value, cancelled, percent_delayed)
 
     def create_scatter(self):
-        number_of_each_delay = [[this_one, self.StartDelays.count(this_one)] for this_one in set(self.StartDelays)]
+        number_of_each_delay = [[this_one, self.start_delays.count(this_one)] for this_one in set(self.start_delays)]
         size = [5 for i in range(len(number_of_each_delay))]  # Todo this is a bit of a bodge, could be made better?
         this_data = DataFrame(number_of_each_delay, columns=['Delay(Minutes)', 'Number of occurrences'])
         title = "Scatter plot of train delay occurrences for " + str(self.start_time)
@@ -350,19 +346,29 @@ class overall_service:
         html_for_this_service = [html_for_this_service]
         return html_for_this_service
 
-    def get_percentage_later(
-            sorted_list):  # this function takes a sorted list and returns for each value, or group of equal values, the percentage of trains that where more delayed than this value.
-        value_and_percentage = []
+    def get_percentage_later(sorted_list):  # this function takes a sorted list and returns for each value, or group of equal values, the percentage of trains that where **more** delayed than this value.
+        time_vals = []
+        percentage_afters = []
         length = len(sorted_list)
         for i in range(0, length):
             if i == (length - 1) or sorted_list[i] != sorted_list[i + 1]:
-                percentage_after = ((length - i) / length) * 100
-                value_and_percentage.append([sorted_list[i], percentage_after])
-        return value_and_percentage
+                this_num_percentage_after = ((length - (i + 1)) / length) * 100
+                time_vals.append(sorted_list[i])
+                percentage_afters.append(this_num_percentage_after)
+                #value_and_percentage.append([sorted_list[i], percentage_after])
+        return time_vals, percentage_afters
 
-    def create_percent_or_more_line_graph(self): #Code a merge sort here
-        for this_time_check in range (1, max(self.end_time)): #this ones end time becuase it's looking at chance of making connection, which depends on time of arrival at destianation station
-            pass #todo change
+    def predict_destination_connection(self,highest_allowed_delay): #todo Might want to add a cheeky graph to this, and train_test, could work out my own r value?
+        time_values, percent_later = self.get_percentage_later(quicksort(self.end_delays))
+        gradient, y_intercept, fit_value, p, std_err = stats.linregress(time_values, percent_later)
+        for time_and_percent_after in percent_later: #He were checking if there is any imperical data, if so we use this because it will be more accurate than linear regression
+            if time_and_percent_after[0] == highest_allowed_delay:
+                predicted_chance = time_and_percent_after[1]
+        else: #None of the trains in the data set where actually this delayed, so we use linear regression to 'predit' a value
+            predicted_chance = gradient * highest_allowed_delay + y_intercept
+        if fit_value < 0:
+            fit_value = fit_value * - 1 # Doing |val| here to make sure it's always positive. For most of our data set's it will be negative.
+        return predicted_chance + fit_value
 
 
 class individual_service:
