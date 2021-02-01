@@ -236,13 +236,16 @@ class Journey_Info:
 
     def get_json_data(self):
         return self.data
-
-
-class overall_service:
-    def __init__(self, this_service_id, this_start_time, this_end_time, number_found, rids_found, this_operator):
-        self.individual_id = this_service_id
+class service():
+    def __init__(self,this_start_time,this_end_time):
         self.start_time = this_start_time
         self.destination_time = this_end_time
+
+class overall_service(service):
+    def __init__(self, this_service_id, this_start_time, this_end_time, number_found, rids_found, this_operator):
+        service.__init__(self,this_start_time,this_end_time)
+
+        self.individual_id = this_service_id
         self.num_rids = number_found
         self.individual_rid_list = rids_found
         self.operator = this_operator
@@ -357,15 +360,16 @@ class overall_service:
         return predicted_chance + fit_value
 
 
-class individual_service:
+class individual_service(service):
     def __init__(self, this_rid):
         self.rid = this_rid
         self.data = json.loads((requests.post("https://hsp-prod.rockshore.net/api/v1/serviceDetails",
                                               auth=HTTPBasicAuth(username,password),
                                               headers=headers,
                                               data=json.dumps({"rid": this_rid})).text))
-        self.start_actual_time = None
-        self.destination_time = None
+        service.__init__(self,None,None) #creating varibales for actual start and destination time for this service
+        #self.start_time = None
+        #self.destination_time = None
         self.delay_at_start = None
         self.delay_at_desti = None
 
