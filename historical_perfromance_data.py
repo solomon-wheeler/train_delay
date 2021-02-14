@@ -35,8 +35,8 @@ def get_api_credentials():
         return get_api_credentials()   #Is this recusion helpful??
     return credentials[0],credentials[1]
 
-#used to sort a list of values, most efficent from tested of merge and heap for train times
-def quicksort(list_to_sort): #todo this could be made more efficent by using median train delay across uk instead of just getting the last value
+#used to sort a list of values most efficent from tested of merge and heap for train times
+def quicksort(list_to_sort): # this could be made more efficent by using median train delay across uk instead of just getting the last value
     different = False  # see below for use of this variable at "different == false"
     length = len(list_to_sort)
     if length < 2:  # If length is less than 1 then there are either no values in the list or 1, so no further anaylsis is needed
@@ -129,7 +129,7 @@ class website():
     def line_to_HTML(self, schedule_time, average, operator, total_services, cancelled, average_desti,
                      journey_time,
                      percent_delayed_service,
-                     service_id):  # Could make this so that colour gradient is based on services, so really
+                     service_id,percent_within_allowed_time):  # Could make this so that colour gradient is based on services, so really
         # unreilaible lines arent just all red, colour graident?
         colour_arival_delay = self.delay_colour(average)
         colour_destination_delay = self.delay_colour(average_desti)
@@ -141,7 +141,7 @@ class website():
                 cancelled) + '</td><td bgcolor=' + str(colour_destination_delay) + '>' + str(
                 average_desti) + '</td><td>' + str(journey_time) + '</td><td>' + str(
                 percent_delayed_service) + '</td><td><a href = ' + str(
-                service_id) + '.html' + '> More info </a> </td></tr>')
+                service_id) + '.html' + '> More info </a> </td><td>' + str(percent_within_allowed_time) + '</td></tr>' )
 
     def set_line(self, line_to_add):
         self.lines_to_add.append(line_to_add)
@@ -242,7 +242,7 @@ class service():
         self.destination_time = this_end_time
 
 class overall_service(service):
-    def __init__(self, this_service_id, this_start_time, this_end_time, number_found, rids_found, this_operator):
+    def __init__(self, this_service_id, this_start_time, this_end_time, number_found, rids_found, this_operator,acceptable_connection_time):
         service.__init__(self,this_start_time,this_end_time)
 
         self.individual_id = this_service_id
@@ -257,6 +257,7 @@ class overall_service(service):
         self.percent_delayed = None
         self.start_delays = []
         self.end_delays = []
+        self.connection_time = acceptable_connection_time
 
     def get_start_time(self):
         return self.start_time
@@ -266,7 +267,7 @@ class overall_service(service):
 
     def get_summary(self):
         return (self.start_time, self.average_delay_value_start, self.operator, self.num_rids, self.amount_cancelled,
-                self.average_delay_value_end, self.journey_time, self.percent_delayed, self.individual_id)
+                self.average_delay_value_end, self.journey_time, self.percent_delayed, self.individual_id,self.predict_destination_connection())
 
     def add_individual_services_skeleton(self):
         amount_done = 1
@@ -321,12 +322,12 @@ class overall_service(service):
         try:
             percent_delayed = int((total_industry_delayed / (sample_size)) * 100)
         except ZeroDivisionError:
-            cancelled = "no data"   #todo check this is the correct value
+            cancelled = "no data"
         return (this_average_delay_value, cancelled, percent_delayed)
 
     def create_scatter(self):
         number_of_each_delay = [[this_one, self.start_delays.count(this_one)] for this_one in set(self.start_delays)]
-        size = [5 for i in range(len(number_of_each_delay))]  # Todo this is a bit of a bodge, could be made better?
+        size = [5 for i in range(len(number_of_each_delay))]
         this_data = DataFrame(number_of_each_delay, columns=['Delay(Minutes)', 'Number of occurrences'])
         title = "Scatter plot of train delay occurrences for " + str(self.start_time)
         fig = plotly.scatter(this_data, x="Delay(Minutes)", y="Number of occurrences", size=size,
@@ -347,14 +348,14 @@ class overall_service(service):
                 #value_and_percentage.append([sorted_list[i], percentage_after])
         return time_vals, percentage_afters
 
-    def predict_destination_connection(self,highest_allowed_delay): #todo Might want to add a cheeky graph to this, and train_test, could work out my own r value?
+    def predict_destination_connection(self): #todo Might want to add a cheeky graph to this, and train_test, could work out my own r value?
         time_values, percent_later = self.get_percentage_later(quicksort(self.end_delays))
         gradient, y_intercept, fit_value, p, std_err = stats.linregress(time_values, percent_later)
         for time_and_percent_after in percent_later: #He were checking if there is any imperical data, if so we use this because it will be more accurate than linear regression
-            if time_and_percent_after[0] == highest_allowed_delay:
+            if time_and_percent_after[0] == self.connection_time:
                 predicted_chance = time_and_percent_after[1]
         else: #None of the trains in the data set where actually this delayed, so we use linear regression to 'predit' a value
-            predicted_chance = gradient * highest_allowed_delay + y_intercept
+            predicted_chance = gradient * self.connection_time + y_intercept
         if fit_value < 0:
             fit_value = fit_value * - 1 # Doing |val| here to make sure it's always positive. For most of our data set's it will be negative.
         return predicted_chance + fit_value
@@ -371,7 +372,7 @@ class individual_service(service):
         #self.start_time = None
         #self.destination_time = None
         self.delay_at_start = None
-        self.delay_at_desti = None
+        self.delay_at_destination = None
 
     def format_data(self):
         for stop in self.data['serviceAttributesDetails']['locations']:
@@ -383,10 +384,10 @@ class individual_service(service):
 
     def delays(self, start_time, end_time):
         self.delay_at_start = delay(start_time, self.actual_time)
-        self.delay_at_desti = delay(end_time, self.destination_time)
+        self.delay_at_destination = delay(end_time, self.destination_time)
 
     def get_delays(self):
-        return (self.delay_at_start, self.delay_at_desti)
+        return (self.delay_at_start, self.delay_at_destination)
 
 
 ### main
@@ -395,6 +396,7 @@ username,password =  get_api_credentials()
 print("This service is Powered By national rail enquiries, more info can be found at www.nationalrail.co.uk")
 start = to_crs(str(input("Name or CRS code of start station")))
 destination = to_crs(str(input("Name or CRS code of the destination station")))
+acceptable_connection_time = int(input("What is the maximum time allowed for your connection (in minutes)")) #todo could change this to a global variable becasue it dosent change, howerver I want scope to have it for idnidvual servies in the futre so it is a class variable in overall_service
 
 This_Journey = Journey_Info()
 This_Journey.create_payload()  # This is creating the payload to be sent to the API, taking basic information from the user and using this to create the payload
@@ -421,7 +423,7 @@ for x in This_Journey.get_json_data()[
         all_services.append(overall_service(services_found, x['serviceAttributesMetrics']['gbtt_ptd'],
                                             x['serviceAttributesMetrics']['gbtt_pta'], num_rids,
                                             x['serviceAttributesMetrics']['rids'],
-                                            x['serviceAttributesMetrics']['toc_code']))
+                                            x['serviceAttributesMetrics']['toc_code'],acceptable_connection_time))
         services_found += 1
 
 if len(invalid_service_ids) != 0:
@@ -448,7 +450,7 @@ for x in all_services:
     x.add_overall_delay_data()
     this_data = x.get_summary()
     overall_output.line_to_HTML(this_data[0], this_data[1], this_data[2], this_data[3], this_data[4], this_data[5],
-                                this_data[6], this_data[7], this_data[8])
+                                this_data[6], this_data[7], this_data[8],this_data[9])
 sys.stdout.flush()
 overall_output.add_to_file()
 overall_output.open_website()
