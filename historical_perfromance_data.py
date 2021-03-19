@@ -44,18 +44,33 @@ def quicksort(list_to_sort): # this could be made more efficent by using median 
     lower_list = []
     higher_list = []
     pivot = list_to_sort.pop()  # This get's the last element from the list, to be used as a pivot. this was tested with median of first, mid, last. But last is more efficent on average.
+    try:
+        pivot = int(pivot)
+    except:
+        pivot = list_to_sort.pop()
+
+
+    y =0
     for this_value in list_to_sort:
-        if this_value > pivot:
-            higher_list.append(this_value)
-            different = True
-        elif this_value == pivot:
-            lower_list.append(this_value)
+        try:
+            this_value = int(this_value)
+        except:
+            list_to_sort.pop(y)
+            y += 1
         else:
-            lower_list.append(this_value)
-            different = True
-    if not different:  # This is included because reliable trains will have many low numbers, this means we don't have to recursively go through all and can just return the list of all the same number
+            if int(this_value) > int(pivot):
+                higher_list.append(this_value)
+                different = True
+            elif this_value == pivot:
+                lower_list.append(this_value)
+            else:
+                lower_list.append(this_value)
+                different = True
+            y += 1
+    if not different:  #This is included because reliable trains will have many low numbers, this means we don't have to recursively go through all and can just return the list of all the same number
         return list_to_sort + [ pivot]
-    return quicksort(lower_list) + [pivot] + quicksort(higher_list)
+    return_val = quicksort(lower_list) + [pivot] + quicksort(higher_list)
+    return return_val
 
 # used to delete files made by the program once done
 def cleanup(file_to_delete):
@@ -141,7 +156,7 @@ class website():
                 cancelled) + '</td><td bgcolor=' + str(colour_destination_delay) + '>' + str(
                 average_desti) + '</td><td>' + str(journey_time) + '</td><td>' + str(
                 percent_delayed_service) + '</td><td><a href = ' + str(
-                service_id) + '.html' + '> More info </a> </td><td>' + str(percent_within_allowed_time) + '</td></tr>' )
+                service_id) + '.html' + '> More info </a> </td><td>' + str(int(percent_within_allowed_time)) + '</td></tr>' ) #int here makes the percentage more readable
 
     def set_line(self, line_to_add):
         self.lines_to_add.append(line_to_add)
@@ -163,7 +178,7 @@ class website():
         return colour
 
     def add_to_file(self):
-        with open((str(self.template_name) + ".html"), 'r') as file:
+        with open(("Templates/" + (self.template_name) + ".html"), 'r') as file:
             data = file.readlines()
         position = 0
         found = False
@@ -336,7 +351,7 @@ class overall_service(service):
         html_for_this_service = [html_for_this_service]
         return html_for_this_service
 
-    def get_percentage_later(sorted_list):  # this function takes a sorted list and returns for each value, or group of equal values, the percentage of trains that where **more** delayed than this value.
+    def get_percentage_later(self,sorted_list):  # this function takes a sorted list and returns for each value, or group of equal values, the percentage of trains that where **more** delayed than this value.
         time_vals = []
         percentage_afters = []
         length = len(sorted_list)
@@ -349,11 +364,15 @@ class overall_service(service):
         return time_vals, percentage_afters
 
     def predict_destination_connection(self): #todo Might want to add a cheeky graph to this, and train_test, could work out my own r value?
-        time_values, percent_later = self.get_percentage_later(quicksort(self.end_delays))
+        sorted_values = quicksort(self.end_delays)
+        print(sorted_values)
+        time_values, percent_later = self.get_percentage_later(sorted_values)
         gradient, y_intercept, fit_value, p, std_err = stats.linregress(time_values, percent_later)
-        for time_and_percent_after in percent_later: #He were checking if there is any imperical data, if so we use this because it will be more accurate than linear regression
-            if time_and_percent_after[0] == self.connection_time:
-                predicted_chance = time_and_percent_after[1]
+        y= 0
+        for x in percent_later: #He were checking if there is any imperical data, if so we use this because it will be more accurate than linear regression
+            y += 1
+            if time_values[0] == self.connection_time:
+                predicted_chance = percent_later[y]
         else: #None of the trains in the data set where actually this delayed, so we use linear regression to 'predit' a value
             predicted_chance = gradient * self.connection_time + y_intercept
         if fit_value < 0:
