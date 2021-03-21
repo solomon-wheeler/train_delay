@@ -124,7 +124,7 @@ def to_crs(crs_code_in):
     if len(options) == 1:
         return options[0][1]
     num_through = 0
-    print("The staition's found where:")
+    print("The stations found where:")
     for each_found_station in options:
         print(str(num_through) + " : " + each_found_station[0])
         num_through += 1
@@ -348,7 +348,7 @@ class overall_service(service):
         fig = plotly.scatter(this_data, x="Delay(Minutes)", y="Number of occurrences", size=size,
                              title=title)
         html_for_this_service = fig.to_html(fig, full_html=False, include_plotlyjs="cdn", include_mathjax=False)
-        html_for_this_service = [html_for_this_service]
+        #html_for_this_service = [html_for_this_service]
         return html_for_this_service
 
     def get_percentage_later(self,sorted_list):  # this function takes a sorted list and returns for each value, or group of equal values, the percentage of trains that where **more** delayed than this value.
@@ -365,7 +365,6 @@ class overall_service(service):
 
     def predict_destination_connection(self): #todo Might want to add a cheeky graph to this, and train_test, could work out my own r value?
         sorted_values = quicksort(self.end_delays)
-        print(sorted_values)
         time_values, percent_later = self.get_percentage_later(sorted_values)
         gradient, y_intercept, fit_value, p, std_err = stats.linregress(time_values, percent_later)
         y= 0
@@ -450,18 +449,23 @@ if len(invalid_service_ids) != 0:
 print("Which service would you like the data on?")
 for this_service in all_services:
     print(this_service.get_individual_id(), this_service.get_start_time())
-service_choice = str(
-    input(
-        "Input a single number for info on just that, numbers with commas in between them for multiple "
-        "services or input ALL for information on all of them"))
+service_choice = str(input( "Input a single number for info on just that, numbers with commas in between them for "
+                            "multiple services or input ALL for information on all of them" ))
+
+ids_to_be_removed = []
 if service_choice != "ALL":
     popped = 0
     services_chosen = service_choice.split(",")
     for all_services_found in all_services:
+
+
         if str(all_services_found.get_individual_id()) not in services_chosen:
-            all_services.pop(
-                all_services_found.get_individual_id() - popped)  # todo not sure if clases are gertting deleted here so might need to deleete them first to make it more memory efficent
-            popped += 1
+            ids_to_be_removed.append(all_services_found.get_individual_id())
+    ids_to_be_removed.reverse() #has to be reversed so that popping items dosen't intefer with the position of other items
+    for this_index in ids_to_be_removed:
+        all_services.pop(this_index)
+
+
 for x in all_services:
     print("Getting Data on Service" + str(x.get_individual_id()))
     x.add_individual_services_skeleton()
