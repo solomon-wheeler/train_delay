@@ -1,5 +1,5 @@
 
-headers = {"Content-Type": "application/json"}  # todo move to class atribute
+headers = {"Content-Type": "application/json"}  # todo move to class attribute
 from scipy import stats
 import requests
 import json
@@ -156,7 +156,7 @@ class website():
                 cancelled) + '</td><td bgcolor=' + str(colour_destination_delay) + '>' + str(
                 average_desti) + '</td><td>' + str(journey_time) + '</td><td>' + str(
                 percent_delayed_service) + '</td><td><a href = ' + str(
-                service_id) + '.html' + '> More info </a> </td><td>' + str(int(percent_within_allowed_time)) + '</td></tr>' ) #int here makes the percentage more readable
+                service_id) + '.html' + '> More info </a> </td><td>' + str(100 - int(percent_within_allowed_time)) + '</td></tr>' ) #int here makes the percentage more readable
 
     def set_line(self, line_to_add):
         self.lines_to_add.append(line_to_add)
