@@ -224,8 +224,8 @@ class Journey_Info:
 
         start_time = str(input("The earliest time you would like services from, in the form HHMM e.g 0700"))
         end_time = str(input("The Latest time you would like services from, in the form HHMM e.g 0700"))
-        start_date = str(input("Please input the earliest data you want services on, in the form YYYY-MM-D e.g 2020-04-12"))
-        end_date = int(input("Please input the earliest data you want services on, in the form YYYY-MM-D e.g 2020-04-12"))
+        start_date = str(input("Please input the earliest date you want services on, in the form YYYY-MM-D e.g 2020-04-12"))
+        end_date = int(input("Please input the latest date you want services on, in the form YYYY-MM-D e.g 2020-04-12"))
         which_days = str(input("Would you like (W)eekdays, (SA)turday or (SU)nday?"))
         if which_days == "W":
             days = "WEEKDAY"
@@ -373,7 +373,7 @@ class overall_service(service): #service child class, stores data on an overall 
         time_values, percent_later = self.get_percentage_later(sorted_values)
         gradient, y_intercept, fit_value, p, std_err = stats.linregress(time_values, percent_later)
         y = 0
-        for x in percent_later:  # He were checking if there is any imperical data, if so we use this because it will be more accurate than linear regression
+        for x in percent_later:  # Here were checking if there is any imperical data, if so we use this because it will be more accurate than linear regression
             y += 1
             if time_values[0] == self.connection_time:
                 predicted_chance = percent_later[y]
